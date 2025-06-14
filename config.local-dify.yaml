@@ -1,0 +1,52 @@
+# 本地Dify + 微信公众号配置模板
+
+# Dify配置（本地部署）
+dify:
+  api_base: "http://localhost:3001/v1"  # 本地Dify API地址
+  api_key: "app-xxxxxxxxxxxxxx"         # 从本地Dify获取的API密钥
+  conversation_id: ""                   # 可选，用于保持会话
+  
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true  # 开发阶段建议开启
+
+# 微信公众号配置
+wechat_official:
+  enabled: true
+  app_id: "wx1234567890abcdef"          # 你的微信公众号AppID
+  app_secret: "abcdef1234567890abcdef"  # 你的微信公众号AppSecret
+  token: "your_custom_token_here"       # 自定义Token，建议使用随机字符串
+  encoding_aeskey: ""                   # 可选，消息加密密钥
+
+# 企业微信配置（暂时禁用）
+work_wechat:
+  enabled: false
+  corp_id: ""
+  corp_secret: ""
+  agent_id: ""
+
+# Redis配置（用于会话管理）
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/app.log"
+
+# 消息处理配置
+message:
+  max_length: 2000
+  timeout: 30
+  enable_group: false    # 微信公众号不支持群聊@bot
+  group_trigger: "@bot"  # 保留配置，暂不使用
+
+# 安全配置
+security:
+  rate_limit: 10
+  whitelist: [] 

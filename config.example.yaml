@@ -1,0 +1,50 @@
+# Dify配置
+dify:
+  api_base: "https://api.dify.ai/v1"
+  api_key: "your-dify-api-key"
+  conversation_id: ""  # 可选，用于保持会话
+  
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  
+# 微信公众号配置
+wechat_official:
+  enabled: true
+  app_id: "your-app-id"
+  app_secret: "your-app-secret"
+  token: "your-token"
+  encoding_aeskey: "your-encoding-aes-key"  # 可选，用于消息加密
+  
+# 企业微信配置
+work_wechat:
+  enabled: true
+  corp_id: "your-corp-id"
+  corp_secret: "your-corp-secret"
+  agent_id: "your-agent-id"
+  
+# Redis配置（用于会话管理）
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/app.log"
+  
+# 消息处理配置
+message:
+  max_length: 2000  # 最大消息长度
+  timeout: 30       # 超时时间（秒）
+  enable_group: true  # 是否启用群聊功能
+  group_trigger: "@bot"  # 群聊触发关键词
+  
+# 安全配置
+security:
+  rate_limit: 10  # 每分钟最大请求数
+  whitelist: []   # IP白名单 
