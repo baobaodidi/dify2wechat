@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  dify2wechat:
+    build: .
+    container_name: dify2wechat
+    ports:
+      - "8000:8000"
+    environment:
+      - DIFY_API_KEY=${DIFY_API_KEY}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - dify-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: dify2wechat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - dify-network
+    command: redis-server --appendonly yes
+
+  nginx:
+    image: nginx:alpine
+    container_name: dify2wechat-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dify2wechat
+    restart: unless-stopped
+    networks:
+      - dify-network
+
+volumes:
+  redis_data:
+
+networks:
+  dify-network:
+    driver: bridge 
