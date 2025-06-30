@@ -292,4 +292,12 @@ tail -f logs/app.log
 如有问题，请查阅：
 - 项目GitHub Issues
 - 微信开发者文档
-- Dify官方文档 
+- Dify官方文档
+
+
+ollama serve
+curl http://localhost:11434/api/tags
+
+cd /opt/homebrew/bin/ && ./natapp
+
+cd /Users/kamirui/Documents/9_AI/Cursor/dify2wechat && source venv/bin/activate && NO_PROXY=localhost python main.py
