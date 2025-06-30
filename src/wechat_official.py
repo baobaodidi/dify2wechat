@@ -227,21 +227,46 @@ class WeChatOfficialHandler:
             
             logger.info(f"处理消息类型: {msg_type}, 来自: {from_user}")
             
-            # 只处理文本消息
-            if msg_type != 'text':
+            # 处理事件消息
+            if msg_type == 'event':
+                event_type = message.get('Event', '')
+                logger.info(f"收到事件: {event_type}")
+                
+                if event_type == 'subscribe':
+                    # 关注事件
+                    welcome_msg = "欢迎关注！我是基于Dify的AI助手，有什么可以帮助您的吗？"
+                    return self.create_text_response(from_user, to_user, welcome_msg)
+                elif event_type == 'unsubscribe':
+                    # 取消关注事件（用户看不到回复，但记录日志）
+                    logger.info(f"用户取消关注: {from_user}")
+                    return ""
+                else:
+                    # 其他事件，返回提示信息
+                    return self.create_text_response(
+                        from_user, to_user, 
+                        "感谢您的操作！请发送文本消息与我对话。"
+                    )
+            
+            # 处理文本消息
+            elif msg_type == 'text':
+                content = message.get('Content', '').strip()
+                if not content:
+                    return self.create_text_response(
+                        from_user, to_user,
+                        "请发送文本消息与我对话。"
+                    )
+                
+                logger.info(f"收到文本消息: {content}")
+                # 继续处理文本消息，不返回
+            
+            # 处理其他类型消息（图片、语音等）
+            else:
                 return self.create_text_response(
                     from_user, to_user, 
-                    "抱歉，我目前只能处理文本消息。"
+                    "抱歉，我目前只能处理文本消息。请发送文字与我对话！"
                 )
             
-            content = message.get('Content', '').strip()
-            if not content:
-                return self.create_text_response(
-                    from_user, to_user,
-                    "请发送文本消息与我对话。"
-                )
-            
-            logger.info(f"收到消息内容: {content}")
+            # 如果到这里，说明是text消息且有内容，准备调用AI
             
             # 微信公众号默认不需要@bot触发（因为是私聊）
             # 如果启用了群聊模式且有触发词，则检查触发
