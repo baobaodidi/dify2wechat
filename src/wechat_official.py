@@ -303,7 +303,8 @@ class WeChatOfficialHandler:
                 
                 if self.verify_signature(signature, timestamp, nonce):
                     logger.info("微信服务器验证成功")
-                    return echostr
+                    from fastapi import Response
+                    return Response(content=echostr, media_type="text/plain")
                 else:
                     logger.error("微信服务器验证失败")
                     raise HTTPException(status_code=403, detail="验证失败")

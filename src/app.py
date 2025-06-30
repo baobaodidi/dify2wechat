@@ -35,6 +35,32 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
+    @app.get("/natapp-test")
+    async def natapp_test():
+        """natapp连通性测试端点"""
+        import datetime
+        return {
+            "message": "🎉 natapp隧道连接成功！",
+            "service": "Dify微信生态接入",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "local_port": 8000,
+            "endpoints": {
+                "health": "/health",
+                "wechat_webhook": "/wechat/official",
+                "api_docs": "/docs"
+            },
+            "next_steps": "请在微信公众平台配置Webhook URL"
+        }
+
+    @app.get("/test")
+    async def test_endpoint():
+        """测试端点，用于验证natapp连通性"""
+        return {
+            "message": "natapp连接测试成功！",
+            "timestamp": asyncio.get_event_loop().time(),
+            "status": "ok"
+        }
+
     @app.get("/")
     async def root():
         """根路径"""
