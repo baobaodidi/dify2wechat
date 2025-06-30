@@ -15,8 +15,8 @@ server:
 # 微信公众号配置
 wechat_official:
   enabled: true
-  app_id: "wxd63887fc743642c7"          # 🔑 替换为你的微信公众号AppID
-  app_secret: "38fcff6fc961458efaedc615231e4662"  # 🔑 替换为你的微信公众号AppSecret
+  app_id: "wx66b8d262adc03629"          # 🔑 替换为你的微信公众号AppID
+  app_secret: "f49f4110ad53aceb24ea58d258e411f5"  # 🔑 替换为你的微信公众号AppSecret
   token: "wechat_dify_token_2024"       # 🔑 自定义Token（在微信后台配置时使用）
   encoding_aeskey: "WX2NegO7b06MdDx8Zn2VAJfmJitBpuqaclI61zf7oWH"  # 消息加密密钥
 
