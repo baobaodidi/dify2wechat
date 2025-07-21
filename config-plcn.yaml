@@ -16,7 +16,7 @@ server:
 wechat_official:
   enabled: true
   app_id: "wx_your_app_id_here"          # 🔑 替换为你的微信公众号AppID
-  app_secret: "your_app_secret_here"  # 🔑 替换为你的微信公众号AppSecret
+  app_secret: "your_app_secret_here "  # 🔑 替换为你的微信公众号AppSecret
   token: "wechat_dify_token_2024"       # 🔑 自定义Token（在微信后台配置时使用）
   encoding_aeskey: "your_encoding_aeskey_here"  # 消息加密密钥
 

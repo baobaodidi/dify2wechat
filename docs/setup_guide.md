@@ -301,3 +301,17 @@ curl http://localhost:11434/api/tags
 cd /opt/homebrew/bin/ && ./natapp
 
 cd /Users/kamirui/Documents/9_AI/Cursor/dify2wechat && source venv/bin/activate && NO_PROXY=localhost python main.py
+
+git rm --cached server.log
+
+服务器地址(URL)
+https://kamirui.natapp4.cc/wechat/official
+
+令牌(Token)
+wechat_dify_token_2024
+
+消息加解密密钥 (EncodingAESKey)
+your_encoding_aeskey_here
+
+消息加解密方式
+明文模式
