@@ -15,6 +15,7 @@ from .config import config
 from .wechat_official import wechat_official_handler
 from .work_wechat import work_wechat_handler
 from .session_manager import session_manager
+from .menu_manager import menu_manager
 
 def create_app() -> FastAPI:
     """创建FastAPI应用"""
@@ -156,6 +157,51 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.error(f"测试Dify API失败: {e}")
             raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
+    
+    @app.post("/api/menu/create")
+    async def create_wechat_menu(data: Dict[str, Any] = None):
+        """创建微信公众号自定义菜单"""
+        try:
+            menu_data = data.get("menu_data") if data else None
+            success = await menu_manager.create_menu(menu_data)
+            
+            if success:
+                return {"message": "✅ 自定义菜单创建成功", "success": True}
+            else:
+                return {"message": "❌ 自定义菜单创建失败", "success": False}
+                
+        except Exception as e:
+            logger.error(f"创建菜单API异常: {e}")
+            raise HTTPException(status_code=500, detail=f"创建菜单失败: {str(e)}")
+    
+    @app.delete("/api/menu/delete")
+    async def delete_wechat_menu():
+        """删除微信公众号自定义菜单"""
+        try:
+            success = await menu_manager.delete_menu()
+            
+            if success:
+                return {"message": "✅ 自定义菜单删除成功", "success": True}
+            else:
+                return {"message": "❌ 自定义菜单删除失败", "success": False}
+                
+        except Exception as e:
+            logger.error(f"删除菜单API异常: {e}")
+            raise HTTPException(status_code=500, detail=f"删除菜单失败: {str(e)}")
+    
+    @app.get("/api/menu/get")
+    async def get_wechat_menu():
+        """获取当前微信公众号菜单配置"""
+        try:
+            menu_config = await menu_manager.get_menu()
+            return {
+                "message": "获取菜单配置成功",
+                "menu_config": menu_config
+            }
+                
+        except Exception as e:
+            logger.error(f"获取菜单API异常: {e}")
+            raise HTTPException(status_code=500, detail=f"获取菜单失败: {str(e)}")
     
     logger.info("FastAPI应用创建成功")
     return app

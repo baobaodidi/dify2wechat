@@ -18,6 +18,7 @@ from wechatpy.exceptions import InvalidSignatureException
 from .config import config
 from .dify_client import dify_client
 from .session_manager import session_manager
+from .menu_manager import menu_manager
 
 class WeChatOfficialHandler:
     """微信公众号消息处理器"""
@@ -218,6 +219,87 @@ class WeChatOfficialHandler:
             content=content
         )
     
+    async def _ensure_menu_exists(self):
+        """确保菜单存在"""
+        try:
+            # 检查当前菜单
+            current_menu = await menu_manager.get_menu()
+            if not current_menu.get('menu'):
+                # 菜单不存在，创建默认菜单
+                logger.info("检测到菜单不存在，正在创建默认菜单...")
+                success = await menu_manager.create_menu()
+                if success:
+                    logger.info("✅ 默认菜单创建成功")
+                else:
+                    logger.error("❌ 默认菜单创建失败")
+        except Exception as e:
+            logger.error(f"确保菜单存在时发生异常: {e}")
+    
+    async def handle_menu_click(self, message: Dict[str, Any], from_user: str, to_user: str) -> str:
+        """处理菜单点击事件"""
+        event_key = message.get('EventKey', '')
+        logger.info(f"处理菜单点击事件: {event_key}, 用户: {from_user}")
+        
+        if event_key == 'AI_CHAT' or event_key == 'START_CHAT':
+            response_text = "🤖 AI助手已准备就绪！\n\n请直接发送消息开始对话：\n• 问我任何问题\n• 寻求建议和帮助\n• 进行有趣的聊天\n\n我会尽我所能为你提供帮助！ ✨"
+            
+        elif event_key == 'CLEAR_HISTORY':
+            # 清除用户会话历史
+            try:
+                await session_manager.clear_conversation(from_user)
+                response_text = "🔄 会话历史已清除！\n\n你现在可以开始一个全新的对话。之前的聊天记录已被清空，我将不会记住之前的对话内容。"
+            except Exception as e:
+                logger.error(f"清除会话历史失败: {e}")
+                response_text = "❌ 清除历史记录时发生错误，请稍后再试。"
+        
+        elif event_key == 'HELP_INFO':
+            response_text = """ℹ️ 使用帮助
+
+🤖 我是基于Dify的AI智能助手，具有以下功能：
+
+💬 **对话功能**
+• 直接发送文字消息与我对话
+• 支持多轮连续对话
+• 记住对话上下文
+
+🔧 **菜单功能**  
+• 🤖 AI助手：快速开始对话
+• 🔄 清除历史：清空聊天记录
+• ℹ️ 使用帮助：查看此帮助信息
+
+⚡ **使用技巧**
+• 可以问我任何问题
+• 支持中英文对话
+• 回复会在5秒内送达
+
+有问题随时问我哦！ 😊"""
+        
+        elif event_key == 'CONTACT_SERVICE':
+            response_text = "📞 联系客服\n\n如需人工客服帮助，请：\n• 发送「人工客服」关键词\n• 或添加客服微信：your-service-wechat\n• 或发送邮件至：service@yourcompany.com\n\n我们将尽快为您提供帮助！"
+        
+        elif event_key == 'ABOUT_US':
+            response_text = """⭐ 关于我们
+
+🚀 **项目简介**
+Dify2WeChat是一个开源的微信AI接入方案，让AI助手轻松融入微信生态。
+
+🛠️ **技术特点**
+• 基于Dify AI平台
+• 支持微信公众号和企业微信
+• 高性能异步处理
+• 完善的会话管理
+
+🌟 **开源地址**
+GitHub: dify2wechat
+
+💪 让AI更好地服务每一个人！"""
+        
+        else:
+            # 未知菜单事件
+            response_text = f"🤔 收到菜单点击事件：{event_key}\n\n请直接发送消息与我对话，或使用菜单中的其他功能。"
+        
+        return self.create_text_response(from_user, to_user, response_text)
+    
     async def handle_message(self, message: Dict[str, Any]) -> str:
         """处理微信消息"""
         try:
@@ -234,12 +316,17 @@ class WeChatOfficialHandler:
                 
                 if event_type == 'subscribe':
                     # 关注事件
-                    welcome_msg = "欢迎关注！我是基于Dify的AI助手，有什么可以帮助您的吗？"
+                    welcome_msg = "🎉 欢迎关注！我是基于Dify的AI助手！\n\n💬 你可以：\n• 直接发送消息与我对话\n• 点击下方菜单快速开始\n• 询问任何问题，我都会尽力帮助你！"
+                    # 异步创建菜单（新用户关注时确保菜单存在）
+                    asyncio.create_task(self._ensure_menu_exists())
                     return self.create_text_response(from_user, to_user, welcome_msg)
                 elif event_type == 'unsubscribe':
                     # 取消关注事件（用户看不到回复，但记录日志）
                     logger.info(f"用户取消关注: {from_user}")
                     return ""
+                elif event_type == 'CLICK':
+                    # 菜单点击事件
+                    return await self.handle_menu_click(message, from_user, to_user)
                 else:
                     # 其他事件，返回提示信息
                     return self.create_text_response(
