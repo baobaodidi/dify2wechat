@@ -16,6 +16,7 @@ class DifyConfig(BaseModel):
     api_base: str = Field(default="https://api.dify.ai/v1")
     api_key: str = Field(default="")
     conversation_id: str = Field(default="")
+    verify_ssl: bool = Field(default=True)  # SSL证书校验开关
 
 class ServerConfig(BaseModel):
     """服务器配置"""
