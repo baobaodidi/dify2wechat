@@ -272,4 +272,8 @@ ngrok.log
 
 # 测试输出
 test-results/
-test-reports/ 
+test-reports/
+
+# ignore目录（忽略所有内容）
+ignore/
+ignore/* 

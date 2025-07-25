@@ -1,9 +1,10 @@
 # 本地Dify + 微信公众号配置
+# ⚠️ 请复制此文件并重命名，然后填入真实凭据
 
 # Dify配置（你的实际配置）
 dify:
   api_base: "http://localhost/v1"           # 你的本地Dify API地址
-  api_key: "app-your-dify-api-key-here"   # 你的Dify API密钥
+  api_key: "app-your-dify-api-key-here"     # 🔑 替换为你的Dify API密钥
   conversation_id: ""                       # 可选，用于保持会话
   
 # 服务器配置
@@ -15,10 +16,10 @@ server:
 # 微信公众号配置
 wechat_official:
   enabled: true
-  app_id: "wx_your_app_id_here"          # 🔑 替换为你的微信公众号AppID
-  app_secret: "your_app_secret_here"  # 🔑 替换为你的微信公众号AppSecret
-  token: "wechat_dify_token_2024"       # 🔑 自定义Token（在微信后台配置时使用）
-  encoding_aeskey: "your_encoding_aeskey_here"  # 消息加密密钥
+  app_id: "wx_your_app_id_here"             # 🔑 替换为你的微信公众号AppID
+  app_secret: "your_app_secret_here"        # 🔑 替换为你的微信公众号AppSecret
+  token: "your_custom_token_here"           # 🔑 自定义Token（在微信后台配置时使用）
+  encoding_aeskey: ""                       # 消息加密密钥（可选）
 
 # 企业微信配置（暂时禁用）
 work_wechat:
