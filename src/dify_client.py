@@ -19,6 +19,7 @@ class DifyClient:
         self.api_base = config.dify.api_base
         self.api_key = config.dify.api_key
         self.timeout = config.message.timeout
+        self.verify_ssl = config.dify.verify_ssl
         # 用于存储部分回复的字典，key为user_id
         self.partial_responses = {}
         
@@ -62,7 +63,7 @@ class DifyClient:
             
             # 使用更短的超时时间和优化的连接设置
             timeout = httpx.Timeout(connect=1.0, read=self.timeout, write=1.0, pool=1.0)
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout, verify=self.verify_ssl) as client:
                 response = await client.post(
                     f"{self.api_base}/chat-messages",
                     headers=headers,
@@ -130,7 +131,7 @@ class DifyClient:
                 "limit": limit
             }
             
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify_ssl) as client:
                 response = await client.get(
                     f"{self.api_base}/messages",
                     headers=headers,
@@ -191,7 +192,7 @@ class DifyClient:
             # 流式模式使用较长的超时时间，让微信层面的4.5秒截断先生效
             timeout = httpx.Timeout(connect=1.0, read=10.0, write=1.0, pool=1.0)  # read超时10秒，让微信层面截断先生效
             
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout, verify=self.verify_ssl) as client:
                 async with client.stream(
                     "POST",
                     f"{self.api_base}/chat-messages",
