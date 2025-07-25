@@ -340,7 +340,8 @@ GitHub: dify2wechat
             
             if len(full_reply) > 20:  # 确保回复有意义
                 # 格式化完整回复
-                reply_content = f"📋 详细回复：\n\n{full_reply}"
+                # reply_content = f"📋 详细回复：\n\n{full_reply}"
+                reply_content = f"{full_reply}"
                 
                 # 限制消息长度
                 max_length = config.message.max_length
@@ -541,7 +542,13 @@ GitHub: dify2wechat
                 reply_content = reply_content[:max_length] + "..."
             
             logger.info(f"公众号消息处理完成，用户: {from_user}, 回复: {reply_content[:50]}...")
-            return self.create_text_response(from_user, to_user, reply_content)
+            logger.info(f"🔍 调试：即将返回的reply_content长度: {len(reply_content)}")
+            
+            final_response = self.create_text_response(from_user, to_user, reply_content)
+            logger.info(f"🔍 调试：create_text_response返回的XML长度: {len(final_response)}")
+            logger.info(f"🔍 调试：create_text_response返回的XML预览: {final_response[:300]}")
+            
+            return final_response
             
         except asyncio.TimeoutError:
             # 重新抛出超时异常，让上层处理
@@ -657,12 +664,13 @@ GitHub: dify2wechat
                     
                     # 如果在4.5秒内完成，直接返回，不需要异步处理
                     logger.info(f"✅ 4.5秒内获得完整回复，直接返回")
+                    logger.info(f"🔍 调试：response变量内容预览: {response[:200] if response else 'None或空'}")
                     
                 except asyncio.TimeoutError:
                     logger.warning("🔔 4.5秒内未能完成，切换到等待提示模式")
-                    
+                
                     # 不显示部分回复内容，直接提供等待提示
-                    reply_content = "🤔 这个问题需要一些时间来思考，我正在为您准备详细的回复，请耐心等待..."
+                    reply_content = "🤔 我在思考中，请耐心等待..."
                     logger.info(f"回复超时，提示用户等待")
                     
                     # 启动异步完整处理任务
@@ -675,6 +683,7 @@ GitHub: dify2wechat
                         logger.info(f"⚠️ 用户 {from_user} 已有异步任务在运行")
                     
                     response = self.create_text_response(from_user, to_user, reply_content)
+                    logger.info(f"🔍 调试：超时情况下response内容: {response[:200] if response else 'None或空'}")
                     
                 except Exception as e:
                     logger.error(f"💥 消息处理异常: {e}")
@@ -685,6 +694,7 @@ GitHub: dify2wechat
                         from_user, to_user, 
                         "抱歉，处理您的消息时遇到了问题，请稍后再试。"
                     )
+                    logger.info(f"🔍 调试：异常情况下response内容: {response[:200] if response else 'None或空'}")
                 
                 logger.info(f"准备返回回复，长度: {len(response)}")
                 logger.info(f"回复XML内容: {response}")
