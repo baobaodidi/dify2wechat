@@ -1,15 +1,26 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-requests==2.31.0
-pydantic==2.5.0
-python-multipart==0.0.6
-xmltodict==0.13.0
-cryptography==41.0.7
-aiofiles==23.2.1
-python-dotenv==1.0.0
-pyyaml==6.0.1
-loguru==0.7.2
-httpx==0.25.2
+# Web框架和服务器
+fastapi==0.115.12
+uvicorn==0.34.3
+
+# 数据处理和验证
+pydantic==2.11.6
+PyYAML==6.0.2
+
+# HTTP客户端
+httpx==0.28.1
+requests==2.32.4         # wechatpy必需依赖
+
+# XML处理
+xmltodict==0.14.2        # wechatpy必需依赖
+
+# 微信SDK
 wechatpy==1.8.18
-redis==5.0.1
-celery==5.3.4 
+
+# 加密功能
+cryptography==41.0.7     # wechatpy加密功能必需
+
+# 数据存储
+redis==6.2.0
+
+# 日志记录
+loguru==0.7.3 
