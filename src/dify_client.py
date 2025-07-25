@@ -189,8 +189,9 @@ class DifyClient:
             if files:
                 payload["files"] = files
             
-            # 流式模式使用较长的超时时间，让微信层面的4.5秒截断先生效
-            timeout = httpx.Timeout(connect=1.0, read=10.0, write=1.0, pool=1.0)  # read超时10秒，让微信层面截断先生效
+            # 流式模式使用较长的超时时间，给Dify充分的响应时间
+            # 微信层面会在4.5秒时截断并返回"我在思考中"，这里设置更长的超时让Dify完整响应
+            timeout = httpx.Timeout(connect=5.0, read=60.0, write=5.0, pool=5.0)  # 读取超时60秒，给Dify充分时间
             
             async with httpx.AsyncClient(timeout=timeout, verify=self.verify_ssl) as client:
                 async with client.stream(

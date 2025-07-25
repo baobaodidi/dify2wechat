@@ -116,7 +116,7 @@ class WeChatOfficialHandler:
             
             # 调用Dify API（使用更长的超时时间）
             original_timeout = dify_client.timeout
-            dify_client.timeout = 30  # 异步处理时使用30秒超时
+            dify_client.timeout = 60  # 异步处理时使用60秒超时，给Dify充分时间
             logger.info(f"⏰ 设置Dify超时时间: {dify_client.timeout}秒")
             
             logger.info("📡 开始调用Dify API（流式模式）...")
@@ -312,7 +312,7 @@ GitHub: dify2wechat
             
             # 使用更长的超时时间进行完整处理
             original_timeout = dify_client.timeout
-            dify_client.timeout = 30  # 异步处理时使用30秒超时
+            dify_client.timeout = 60  # 异步处理时使用60秒超时，给Dify充分时间
             
             logger.info(f"📡 异步调用Dify API获取完整回复...")
             # 清除之前的部分回复缓存，重新开始
