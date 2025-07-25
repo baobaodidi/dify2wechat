@@ -203,5 +203,54 @@ def create_app() -> FastAPI:
             logger.error(f"获取菜单API异常: {e}")
             raise HTTPException(status_code=500, detail=f"获取菜单失败: {str(e)}")
     
+    @app.get("/api/async/status")
+    async def get_async_tasks_status():
+        """获取当前异步任务状态"""
+        try:
+            active_tasks = {}
+            for user_id, task in wechat_official_handler.async_tasks.items():
+                active_tasks[user_id] = {
+                    "status": "running" if not task.done() else "completed",
+                    "done": task.done(),
+                    "cancelled": task.cancelled()
+                }
+            
+            return {
+                "message": "获取异步任务状态成功",
+                "active_tasks_count": len(active_tasks),
+                "active_tasks": active_tasks
+            }
+                
+        except Exception as e:
+            logger.error(f"获取异步任务状态失败: {e}")
+            raise HTTPException(status_code=500, detail=f"获取状态失败: {str(e)}")
+    
+    @app.post("/api/async/force_complete")
+    async def force_complete_async_task(data: Dict[str, str]):
+        """强制完成指定用户的异步任务"""
+        user_id = data.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="用户ID不能为空")
+        
+        try:
+            if user_id in wechat_official_handler.async_tasks:
+                task = wechat_official_handler.async_tasks[user_id]
+                if not task.done():
+                    # 等待任务完成（最多等待10秒）
+                    try:
+                        await asyncio.wait_for(task, timeout=10.0)
+                        return {"message": f"用户 {user_id} 的异步任务已完成"}
+                    except asyncio.TimeoutError:
+                        task.cancel()
+                        return {"message": f"用户 {user_id} 的异步任务超时已取消"}
+                else:
+                    return {"message": f"用户 {user_id} 的异步任务已经完成"}
+            else:
+                return {"message": f"用户 {user_id} 没有进行中的异步任务"}
+                
+        except Exception as e:
+            logger.error(f"强制完成异步任务失败: {e}")
+            raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
+    
     logger.info("FastAPI应用创建成功")
     return app

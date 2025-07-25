@@ -23,7 +23,7 @@ class DifyClient:
         self.partial_responses = {}
         
     async def chat_completion(
-        self, 
+        self, ·
         message: str, 
         user_id: str,
         conversation_id: Optional[str] = None,

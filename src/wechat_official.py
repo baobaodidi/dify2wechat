@@ -300,6 +300,138 @@ GitHub: dify2wechat
         
         return self.create_text_response(from_user, to_user, response_text)
     
+    async def async_complete_response(self, message: Dict[str, Any], user_id: str):
+        """异步完成完整回复（等待超时后继续处理）"""
+        try:
+            logger.info(f"🔄 异步完整回复开始，用户: {user_id}")
+            
+            content = message.get('Content', '').strip()
+            
+            # 获取会话ID
+            conversation_id = await session_manager.get_conversation_id(user_id)
+            
+            # 使用更长的超时时间进行完整处理
+            original_timeout = dify_client.timeout
+            dify_client.timeout = 30  # 异步处理时使用30秒超时
+            
+            logger.info(f"📡 异步调用Dify API获取完整回复...")
+            # 清除之前的部分回复缓存，重新开始
+            if user_id in dify_client.partial_responses:
+                del dify_client.partial_responses[user_id]
+            
+            result = await dify_client.chat_completion_streaming(
+                message=content,
+                user_id=user_id,
+                conversation_id=conversation_id
+            )
+            
+            # 恢复原始超时设置
+            dify_client.timeout = original_timeout
+            
+            # 保存会话ID
+            if result.get('conversation_id'):
+                await session_manager.set_conversation_id(
+                    user_id, 
+                    result['conversation_id']
+                )
+            
+            # 获取完整回复内容
+            full_reply = result.get('answer', '抱歉，完整回复获取失败。')
+            
+            if len(full_reply) > 20:  # 确保回复有意义
+                # 格式化完整回复
+                reply_content = f"📋 详细回复：\n\n{full_reply}"
+                
+                # 限制消息长度
+                max_length = config.message.max_length
+                if len(reply_content) > max_length:
+                    reply_content = reply_content[:max_length] + "...\n\n💡 回复内容较长，已截断显示"
+                
+                # 尝试通过客服消息发送
+                logger.info(f"📤 尝试通过客服消息发送完整回复，长度: {len(full_reply)}")
+                success = await self.send_customer_service_message(user_id, reply_content)
+                
+                if success:
+                    logger.info(f"✅ 完整回复通过客服消息发送成功，用户: {user_id}")
+                else:
+                    logger.warning(f"⚠️ 客服消息发送失败，将完整回复保存到缓存")
+                    # 保存到缓存，用户下次发消息时自动推送
+                    await self.cache_complete_response(user_id, reply_content)
+            else:
+                logger.warning(f"⚠️ 异步获取的回复内容太短，跳过发送")
+                
+        except Exception as e:
+            logger.error(f"💥 异步完整回复异常: {e}")
+            # 发送错误提示（如果客服消息可用）或缓存错误信息
+            error_msg = "抱歉，在生成详细回复时遇到了问题。您可以重新提问或换个问题试试。"
+            
+            success = await self.send_customer_service_message(user_id, error_msg)
+            if not success:
+                await self.cache_complete_response(user_id, error_msg)
+                
+        finally:
+            # 清理任务记录
+            if user_id in self.async_tasks:
+                del self.async_tasks[user_id]
+                logger.info(f"🧹 清理异步任务记录，用户: {user_id}")
+    
+    async def cache_complete_response(self, user_id: str, response: str):
+        """缓存完整回复，供下次用户交互时使用"""
+        try:
+            cache_key = f"pending_response:{user_id}"
+            # 使用会话管理器的Redis缓存
+            if hasattr(session_manager, 'redis_client') and session_manager.redis_client:
+                # 存储到Redis，有效期10分钟
+                import json
+                cache_data = {
+                    'response': response,
+                    'timestamp': time.time()
+                }
+                session_manager.redis_client.setex(cache_key, 600, json.dumps(cache_data))
+                logger.info(f"💾 完整回复已缓存，用户: {user_id}")
+            else:
+                # 存储到内存
+                if not hasattr(self, 'pending_responses'):
+                    self.pending_responses = {}
+                self.pending_responses[user_id] = {
+                    'response': response,
+                    'timestamp': time.time()
+                }
+                logger.info(f"💾 完整回复已存储到内存缓存，用户: {user_id}")
+        except Exception as e:
+            logger.error(f"缓存完整回复失败: {e}")
+    
+    async def get_cached_response(self, user_id: str) -> str:
+        """获取缓存的完整回复"""
+        try:
+            cache_key = f"pending_response:{user_id}"
+            cached_response = ""
+            
+            # 从Redis获取
+            if hasattr(session_manager, 'redis_client') and session_manager.redis_client:
+                import json
+                cache_data = session_manager.redis_client.get(cache_key)
+                if cache_data:
+                    data = json.loads(cache_data)
+                    cached_response = data.get('response', '')
+                    # 获取后删除缓存
+                    session_manager.redis_client.delete(cache_key)
+            else:
+                # 从内存获取
+                if hasattr(self, 'pending_responses') and user_id in self.pending_responses:
+                    cached_response = self.pending_responses[user_id].get('response', '')
+                    # 获取后删除缓存
+                    del self.pending_responses[user_id]
+            
+            if cached_response:
+                logger.info(f"📥 获取到缓存的完整回复，用户: {user_id}")
+                return cached_response
+                
+        except Exception as e:
+            logger.error(f"获取缓存回复失败: {e}")
+        
+        return ""
+    
     async def handle_message(self, message: Dict[str, Any]) -> str:
         """处理微信消息"""
         try:
@@ -344,6 +476,16 @@ GitHub: dify2wechat
                     )
                 
                 logger.info(f"收到文本消息: {content}")
+                
+                # 检查是否有缓存的完整回复
+                cached_response = await self.get_cached_response(from_user)
+                if cached_response:
+                    logger.info(f"💾 找到缓存的完整回复，优先返回")
+                    return self.create_text_response(
+                        from_user, to_user, 
+                        f"📨 之前为您准备的完整回复：\n\n{cached_response}"
+                    )
+                
                 # 继续处理文本消息，不返回
             
             # 处理其他类型消息（图片、语音等）
@@ -377,6 +519,12 @@ GitHub: dify2wechat
                 conversation_id=conversation_id
             )
             
+            # 检查是否是部分回复（超时情况）
+            if result.get('partial', False):
+                logger.warning(f"📋 Dify返回部分回复，需要异步处理")
+                # 抛出超时异常，让上层处理异步任务
+                raise asyncio.TimeoutError("Dify API超时，返回部分内容")
+            
             # 保存会话ID
             if result.get('conversation_id'):
                 await session_manager.set_conversation_id(
@@ -395,6 +543,9 @@ GitHub: dify2wechat
             logger.info(f"公众号消息处理完成，用户: {from_user}, 回复: {reply_content[:50]}...")
             return self.create_text_response(from_user, to_user, reply_content)
             
+        except asyncio.TimeoutError:
+            # 重新抛出超时异常，让上层处理
+            raise
         except Exception as e:
             logger.error(f"消息处理异常: {e}")
             return self.create_text_response(
@@ -484,39 +635,56 @@ GitHub: dify2wechat
                         for old_msg in old_messages:
                             self.processed_messages.discard(old_msg)
                 
-                # 微信要求5秒内响应，采用4.5秒截断策略
+                # 微信要求5秒内响应，采用智能分层回复策略
                 try:
                     content_length = len(message.get('Content', ''))
-                    timeout_duration = 4.5  # 4.5秒超时，实现截断策略
+                    timeout_duration = 4.5  # 4.5秒超时，为异步处理留出时间
                     
                     logger.info(f"消息长度: {content_length}, 超时设置: {timeout_duration}秒")
                     
-                    # 设置超时处理
+                    from_user = message.get('FromUserName', '')
+                    to_user = message.get('ToUserName', '')
+                    
+                    # 智能分层回复策略
                     import asyncio
+                    from .dify_client import dify_client
+                    
+                    # 等待4.5秒看能否获得完整回复
                     response = await asyncio.wait_for(
                         self.handle_message(message), 
                         timeout=timeout_duration
                     )
+                    
+                    # 如果在4.5秒内完成，直接返回，不需要异步处理
+                    logger.info(f"✅ 4.5秒内获得完整回复，直接返回")
+                    
                 except asyncio.TimeoutError:
-                    logger.warning("4.5秒截断触发")
-                    from_user = message.get('FromUserName', '')
-                    to_user = message.get('ToUserName', '')
+                    logger.warning("🔔 4.5秒内未能完成，切换到等待提示模式")
                     
-                    # 获取部分回复内容
-                    from .dify_client import dify_client
-                    partial_result = dify_client.get_partial_response(from_user)
+                    # 不显示部分回复内容，直接提供等待提示
+                    reply_content = "🤔 这个问题需要一些时间来思考，我正在为您准备详细的回复，请耐心等待..."
+                    logger.info(f"回复超时，提示用户等待")
                     
-                    reply_content = partial_result.get('answer', '抱歉，我暂时无法回复。')
-                    
-                    # 如果是部分内容，添加提示
-                    if partial_result.get('partial', False):
-                        logger.info(f"返回部分内容，长度: {len(reply_content)}")
+                    # 启动异步完整处理任务
+                    if from_user not in self.async_tasks:
+                        logger.info(f"🚀 启动异步完整处理任务，用户: {from_user}")
+                        self.async_tasks[from_user] = asyncio.create_task(
+                            self.async_complete_response(message, from_user)
+                        )
                     else:
-                        logger.info(f"返回俏皮回复")
+                        logger.info(f"⚠️ 用户 {from_user} 已有异步任务在运行")
                     
                     response = self.create_text_response(from_user, to_user, reply_content)
                     
-
+                except Exception as e:
+                    logger.error(f"💥 消息处理异常: {e}")
+                    # 发生异常时也提供友好回复
+                    from_user = message.get('FromUserName', '')
+                    to_user = message.get('ToUserName', '')
+                    response = self.create_text_response(
+                        from_user, to_user, 
+                        "抱歉，处理您的消息时遇到了问题，请稍后再试。"
+                    )
                 
                 logger.info(f"准备返回回复，长度: {len(response)}")
                 logger.info(f"回复XML内容: {response}")
